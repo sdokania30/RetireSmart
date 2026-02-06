@@ -27,14 +27,14 @@ export const simulatePlan = (
   const ledger: LedgerRow[] = [];
   // Ensure we simulate at least the current year even if life expectancy < current age
   const yearsToSimulate = Math.max(0, settings.lifeExpectancy - settings.currentAge);
-  
+
   let currentBalance = profile.currentCorpus;
   let currentSIP = overrideSIP !== undefined ? overrideSIP : profile.plannedSIP;
 
   for (let i = 0; i <= yearsToSimulate; i++) {
     const currentAge = settings.currentAge + i;
     const isAccumulation = currentAge < settings.retirementAge;
-    
+
     // 1. Inflows (Investments)
     // Applied only if in accumulation phase.
     // Note: If currentAge == retirementAge, we assume retired at beginning of year, so no SIP this year.
@@ -63,7 +63,7 @@ export const simulatePlan = (
     // Growth = (Opening + NetFlows / 2) * Rate
     const netFlows = annualSIP - annualExpenses - annualMilestones;
     const rate = isAccumulation ? profile.preRetirementROI : settings.postRetirementROI;
-    
+
     // If balance goes negative mid-year, we still apply growth (debt interest) or lack of growth depending on model.
     // Here we assume debt accumulates at the same rate (simplified) or assets grow.
     // However, usually debt interest >> asset growth. keeping it simple:
@@ -86,7 +86,7 @@ export const simulatePlan = (
 
     // Updates for next loop
     currentBalance = closingBalance;
-    
+
     // Step up SIP for next year if still accumulating
     if (isAccumulation) {
       currentSIP = currentSIP * (1 + profile.sipStepUp / 100);
@@ -105,10 +105,10 @@ export const calculateScenario = (
   expenses: ExpenseBucket[],
   milestones: Milestone[]
 ): CalculationResult => {
-  
+
   // 1. Calculate Status Quo (Planned SIP)
   const userLedger = simulatePlan(settings, profile, expenses, milestones);
-  
+
   // Defensive check: If ledger is empty (should be prevented by simulatePlan fix, but good practice)
   if (userLedger.length === 0) {
     return {
@@ -125,24 +125,32 @@ export const calculateScenario = (
   // 2. Solve for Required SIP
   // Range: 0 to 100 Crores/month (arbitrary high cap)
   let low = 0;
-  let high = 1000000000; 
+  let high = 1000000000;
   let requiredSIP = 0;
   let attempts = 0;
   let solved = false;
 
-  // Optimization: If current plan is already surplus, Required SIP <= Planned SIP.
-  // We still search to find the exact 0-bound SIP (it might be negative if corpus is huge, implies 0 needed).
-  
-  while (attempts < 100) {
+  // Optimization: If current plan already has surplus, check if we even need SIP
+  if (finalBalanceUser >= 0) {
+    // Try zero SIP first
+    const zeroSIPSim = simulatePlan(settings, profile, expenses, milestones, 0);
+    if (zeroSIPSim.length > 0 && zeroSIPSim[zeroSIPSim.length - 1].closingBalance >= 0) {
+      requiredSIP = 0;
+      solved = true;
+    }
+  }
+
+  while (!solved && attempts < 100) {
     const mid = (low + high) / 2;
     const sim = simulatePlan(settings, profile, expenses, milestones, mid);
-    
+
     // Safety check inside loop
     if (sim.length === 0) break;
 
     const finalBal = sim[sim.length - 1].closingBalance;
 
-    if (Math.abs(finalBal) < 1000) { // Tolerance of Rs 1000
+    // Improved tolerance: Rs 10,000 (more reasonable for large corpus values)
+    if (Math.abs(finalBal) < 10000) {
       requiredSIP = mid;
       solved = true;
       break;

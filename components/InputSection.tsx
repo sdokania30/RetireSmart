@@ -1,6 +1,8 @@
-import React from 'react';
-import { Plus, Trash2, HelpCircle, AlertCircle } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { GlobalSettings, InvestmentProfile, ExpenseBucket, Milestone } from '../types';
+import { InputField } from './ui/InputField';
+import { Tooltip } from './ui/Tooltip';
 
 interface InputSectionProps {
   settings: GlobalSettings;
@@ -14,83 +16,9 @@ interface InputSectionProps {
   onAutoFillSIP: (amount: number) => void;
   requiredSIP: number;
   errors: Record<string, string>;
+  isZeroMode: boolean;
+  setIsZeroMode: (v: boolean) => void;
 }
-
-const Tooltip = ({ text }: { text: string }) => (
-  <div className="group relative flex items-center ml-1 inline-block">
-    <HelpCircle className="w-3 h-3 text-slate-400 cursor-help" />
-    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-slate-800 text-white text-xs rounded shadow-lg z-50 pointer-events-none">
-      {text}
-      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-800"></div>
-    </div>
-  </div>
-);
-
-interface InputFieldProps {
-  label: string;
-  value: number;
-  onChange: (val: string) => void;
-  error?: string;
-  tooltip?: string;
-  className?: string;
-  step?: string;
-  isLakhs?: boolean;
-}
-
-const InputField: React.FC<InputFieldProps> = ({ 
-  label, 
-  value, 
-  onChange, 
-  error, 
-  tooltip, 
-  className, 
-  step = "1", 
-  isLakhs = false
-}) => {
-  
-  // If isLakhs is true, we display value / 100000
-  const displayValue = isLakhs ? (value / 100000) : value;
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (isLakhs) {
-       // Allow user to type decimal points for lakhs
-       const num = parseFloat(val);
-       if (!isNaN(num)) {
-         // Convert back to absolute rupees
-         // Use Math.round to avoid float precision issues like 0.3 * 100000 = 30000.0000004
-         onChange((Math.round(num * 100000)).toString());
-       } else {
-         onChange("0");
-       }
-    } else {
-      onChange(val);
-    }
-  };
-
-  return (
-    <div className={className}>
-      <div className="flex justify-between items-baseline mb-1">
-        <label className="flex items-center text-xs font-medium text-slate-500">
-          {label} {isLakhs && <span className="text-[10px] text-slate-400 font-normal ml-1">(₹ Lakhs)</span>}
-          {tooltip && <Tooltip text={tooltip} />}
-        </label>
-      </div>
-      <div className="relative">
-        <input 
-          type="number" 
-          step={isLakhs ? "0.01" : step}
-          value={displayValue === 0 ? '' : displayValue} 
-          onChange={handleChange}
-          placeholder="0"
-          className={`w-full p-2 border rounded text-sm focus:ring-2 outline-none transition-all ${error ? 'border-red-400 focus:ring-red-200 bg-red-50' : 'border-slate-200 focus:ring-brand-500'}`} 
-        />
-        {error && <AlertCircle className="absolute right-2 top-2.5 text-red-500 w-4 h-4" />}
-      </div>
-      {error && <span className="text-[10px] text-red-600 mt-1 block">{error}</span>}
-    </div>
-  );
-};
 
 export const InputSection: React.FC<InputSectionProps> = ({
   settings, setSettings,
@@ -99,7 +27,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
   milestones, setMilestones,
   onAutoFillSIP,
   requiredSIP,
-  errors
+  errors,
+  isZeroMode,
+  setIsZeroMode
 }) => {
 
   const handleSettingChange = (key: keyof GlobalSettings, val: string) => {
@@ -148,60 +78,102 @@ export const InputSection: React.FC<InputSectionProps> = ({
     setMilestones(milestones.filter(m => m.id !== id));
   };
 
+  // Auto-sync expense end ages with life expectancy
+  useEffect(() => {
+    const needsUpdate = expenses.some(e => e.endAge !== settings.lifeExpectancy);
+    if (needsUpdate) {
+      setExpenses(expenses.map(e => ({
+        ...e,
+        endAge: settings.lifeExpectancy
+      })));
+    }
+  }, [settings.lifeExpectancy]);
+
   return (
     <div className="p-5 space-y-8 pb-20">
-      
+
+      {/* Zero Mode Toggle */}
+      <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-slate-600 rounded-lg flex items-center justify-center">
+            <span className="text-white text-xs font-bold">0%</span>
+          </div>
+          <div>
+            <label className="text-sm font-bold text-slate-700 block">Zero Growth Mode</label>
+            <p className="text-[10px] text-slate-500">Simulate without returns or inflation</p>
+          </div>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            checked={isZeroMode}
+            onChange={(e) => setIsZeroMode(e.target.checked)}
+          />
+          <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600 shadow-inner"></div>
+        </label>
+      </div>
+
       {/* 1. Global Assumptions */}
       <section className="space-y-4">
-        <h3 className="text-lg font-semibold text-slate-800 border-b pb-2">Scenario Config</h3>
+        <h3 className="text-base font-bold text-slate-800 border-b-2 border-slate-200 pb-3 flex items-center gap-2">
+          <div className="w-1 h-5 bg-brand-600 rounded"></div>
+          Scenario Configuration
+        </h3>
         <div className="grid grid-cols-2 gap-4">
-          <InputField 
-            label="Current Age" 
-            value={settings.currentAge} 
+          <InputField
+            label="Current Age"
+            value={settings.currentAge}
             onChange={v => handleSettingChange('currentAge', v)}
             error={errors.currentAge}
           />
-          <InputField 
-            label="Retirement Age" 
-            value={settings.retirementAge} 
+          <InputField
+            label="Retirement Age"
+            value={settings.retirementAge}
             onChange={v => handleSettingChange('retirementAge', v)}
             error={errors.retirementAge}
           />
-          <InputField 
-            label="Life Expectancy" 
-            value={settings.lifeExpectancy} 
+          <InputField
+            label="Life Expectancy"
+            value={settings.lifeExpectancy}
             onChange={v => handleSettingChange('lifeExpectancy', v)}
             error={errors.lifeExpectancy}
           />
-          <InputField 
-            label="Post-Ret. ROI %" 
-            value={settings.postRetirementROI} 
+          <InputField
+            label="Post-Ret. ROI %"
+            value={settings.postRetirementROI}
             onChange={v => handleSettingChange('postRetirementROI', v)}
             tooltip="Expected annual return on corpus after retirement"
+            disabled={isZeroMode}
           />
         </div>
       </section>
 
       {/* 2. Investment Profile */}
       <section className="space-y-4">
-        <h3 className="text-lg font-semibold text-slate-800 border-b pb-2">Assets & Savings</h3>
+        <h3 className="text-base font-bold text-slate-800 border-b-2 border-slate-200 pb-3 flex items-center gap-2">
+          <div className="w-1 h-5 bg-emerald-600 rounded"></div>
+          Assets & Savings
+        </h3>
         <div className="space-y-3">
-          <InputField 
-            label="Current Corpus" 
-            value={profile.currentCorpus} 
+          <InputField
+            label="Current Corpus"
+            value={profile.currentCorpus}
             onChange={v => handleProfileChange('currentCorpus', v)}
             isLakhs={true}
           />
           <div className="grid grid-cols-2 gap-4">
-            <InputField 
-              label="Pre-Ret. ROI %" 
-              value={profile.preRetirementROI} 
+            <InputField
+              label="Pre-Ret. ROI %"
+              value={profile.preRetirementROI}
               onChange={v => handleProfileChange('preRetirementROI', v)}
+              disabled={isZeroMode}
             />
-            <InputField 
-              label="SIP Step-Up %" 
-              value={profile.sipStepUp} 
+            <InputField
+              label="SIP Step-Up %"
+              value={profile.sipStepUp}
               onChange={v => handleProfileChange('sipStepUp', v)}
+              disabled={isZeroMode}
             />
           </div>
           <div className="p-3 bg-brand-50 rounded-lg border border-brand-100">
@@ -212,13 +184,13 @@ export const InputSection: React.FC<InputSectionProps> = ({
               </button>
             </div>
             <div className="relative">
-              <input 
+              <input
                 type="number"
                 step="0.01"
-                value={profile.plannedSIP > 0 ? profile.plannedSIP / 100000 : ''} 
-                onChange={e => handleProfileChange('plannedSIP', (Math.round(Number(e.target.value) * 100000)).toString())} 
+                value={profile.plannedSIP > 0 ? profile.plannedSIP / 100000 : ''}
+                onChange={e => handleProfileChange('plannedSIP', (Math.round(Number(e.target.value) * 100000)).toString())}
                 placeholder="0"
-                className="w-full p-2 border border-brand-200 rounded focus:ring-2 focus:ring-brand-500 outline-none text-brand-900 font-bold" 
+                className="w-full p-2 border border-brand-200 rounded focus:ring-2 focus:ring-brand-500 outline-none text-brand-900 font-bold"
               />
             </div>
           </div>
@@ -227,8 +199,11 @@ export const InputSection: React.FC<InputSectionProps> = ({
 
       {/* 3. Expense Buckets */}
       <section className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-semibold text-slate-800">Expense Buckets</h3>
+        <div className="flex justify-between items-center border-b-2 border-slate-200 pb-3">
+          <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+            <div className="w-1 h-5 bg-amber-600 rounded"></div>
+            Monthly Expense Categories
+          </h3>
           <button onClick={addExpense} className="p-1 hover:bg-slate-100 rounded-full text-brand-600 transition-colors">
             <Plus size={18} />
           </button>
@@ -237,9 +212,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
           {expenses.map((exp) => (
             <div key={exp.id} className="p-3 bg-white border rounded-lg shadow-sm space-y-2 group relative">
               <div className="flex justify-between items-start">
-                <input 
-                  type="text" 
-                  value={exp.name} 
+                <input
+                  type="text"
+                  value={exp.name}
                   onChange={e => updateExpense(exp.id, 'name', e.target.value)}
                   className="font-medium text-sm border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none w-2/3"
                 />
@@ -248,22 +223,23 @@ export const InputSection: React.FC<InputSectionProps> = ({
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <InputField 
+                <InputField
                   label="Cost"
-                  value={exp.currentMonthlyCost} 
+                  value={exp.currentMonthlyCost}
                   onChange={v => updateExpense(exp.id, 'currentMonthlyCost', Number(v))}
                   className="w-full"
                   isLakhs={true}
                 />
-                <InputField 
+                <InputField
                   label="Infl. %"
-                  value={exp.inflationRate} 
+                  value={exp.inflationRate}
                   onChange={v => updateExpense(exp.id, 'inflationRate', Number(v))}
                   className="w-full"
+                  disabled={isZeroMode}
                 />
-                <InputField 
+                <InputField
                   label="End Age"
-                  value={exp.endAge} 
+                  value={exp.endAge}
                   onChange={v => updateExpense(exp.id, 'endAge', Number(v))}
                   className="w-full"
                   error={errors[`exp_end_${exp.id}`]}
@@ -276,8 +252,11 @@ export const InputSection: React.FC<InputSectionProps> = ({
 
       {/* 4. Milestones */}
       <section className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-semibold text-slate-800">Life Milestones</h3>
+        <div className="flex justify-between items-center border-b-2 border-slate-200 pb-3">
+          <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+            <div className="w-1 h-5 bg-purple-600 rounded"></div>
+            Life Milestones
+          </h3>
           <button onClick={addMilestone} className="p-1 hover:bg-slate-100 rounded-full text-brand-600 transition-colors">
             <Plus size={18} />
           </button>
@@ -286,9 +265,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
           {milestones.map((ms) => (
             <div key={ms.id} className="p-3 bg-white border rounded-lg shadow-sm space-y-2 group">
               <div className="flex justify-between items-start">
-                <input 
-                  type="text" 
-                  value={ms.name} 
+                <input
+                  type="text"
+                  value={ms.name}
                   onChange={e => updateMilestone(ms.id, 'name', e.target.value)}
                   className="font-medium text-sm border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none w-2/3"
                 />
@@ -297,22 +276,23 @@ export const InputSection: React.FC<InputSectionProps> = ({
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <InputField 
+                <InputField
                   label="Cost"
-                  value={ms.currentCost} 
+                  value={ms.currentCost}
                   onChange={v => updateMilestone(ms.id, 'currentCost', Number(v))}
                   className="w-full"
                   isLakhs={true}
                 />
-                <InputField 
+                <InputField
                   label="Infl. %"
-                  value={ms.inflationRate} 
+                  value={ms.inflationRate}
                   onChange={v => updateMilestone(ms.id, 'inflationRate', Number(v))}
                   className="w-full"
+                  disabled={isZeroMode}
                 />
-                <InputField 
+                <InputField
                   label="In Years"
-                  value={ms.yearOffset} 
+                  value={ms.yearOffset}
                   onChange={v => updateMilestone(ms.id, 'yearOffset', Number(v))}
                   className="w-full"
                   error={errors[`ms_year_${ms.id}`]}

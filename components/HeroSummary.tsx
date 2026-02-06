@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatCompact, formatCurrency } from '../constants';
 import { CalculationResult } from '../types';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, TrendingUp, Target } from 'lucide-react';
 
 interface HeroSummaryProps {
   result: CalculationResult;
@@ -14,27 +14,36 @@ export const HeroSummary: React.FC<HeroSummaryProps> = ({ result, plannedSIP }) 
   const isFI = result.requiredSIP <= 0;
 
   return (
-    <div className="sticky top-0 z-40 bg-white border-b shadow-sm p-4 lg:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="sticky top-0 z-40 bg-gradient-to-br from-white to-slate-50 border-b-2 border-slate-200 shadow-md p-5 lg:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
       <div className="flex flex-col">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Target Corpus</span>
-        <div className="flex items-baseline gap-2">
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 leading-none">
+        <div className="flex items-center gap-2 mb-2">
+          <Target className="w-4 h-4 text-brand-600" />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Target Corpus</span>
+        </div>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 leading-none">
             {formatCompact(result.requiredCorpus)}
           </h1>
-          <span className="text-xs text-slate-400">@ Retirement</span>
+          <span className="text-xs text-slate-400 font-medium">@ Retirement</span>
         </div>
       </div>
 
       <div className="flex flex-col">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Required Monthly SIP</span>
-        <div className={`text-2xl lg:text-3xl font-bold leading-none ${isShortfall && !isFI ? 'text-amber-600' : 'text-emerald-600'}`}>
-           {isFI ? "Fully Funded" : formatCurrency(result.requiredSIP)}
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-4 h-4 text-emerald-600" />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Required Monthly SIP</span>
+        </div>
+        <div className={`text-3xl lg:text-4xl font-extrabold leading-none ${isShortfall && !isFI ? 'text-amber-600' : 'text-emerald-600'}`}>
+          {isFI ? "Fully Funded ✓" : formatCurrency(result.requiredSIP)}
         </div>
       </div>
 
-      <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm ${isShortfall && !isFI ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100'}`}>
-        {isShortfall && !isFI ? <AlertTriangle size={16} /> : <CheckCircle size={16} />}
-        <span>{isShortfall && !isFI ? 'Shortfall Detected' : 'Plan On Track'}</span>
+      <div className={`px-5 py-3 rounded-xl flex items-center gap-3 text-sm font-bold shadow-lg transition-all ${isShortfall && !isFI ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-700 border-2 border-red-200' : 'bg-gradient-to-br from-green-50 to-green-100 text-green-700 border-2 border-green-200'}`}>
+        {isShortfall && !isFI ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
+        <div>
+          <span className="block text-xs opacity-75 font-normal">Status</span>
+          <span className="block">{isShortfall && !isFI ? 'Shortfall' : 'On Track'}</span>
+        </div>
       </div>
     </div>
   );
