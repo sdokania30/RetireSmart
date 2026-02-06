@@ -60,6 +60,7 @@ const App: React.FC = () => {
         requiredSIP: 0,
         requiredCorpus: 0,
         isFeasible: false,
+        isSolvable: false,
         shortfall: 0
       };
     }
@@ -68,6 +69,7 @@ const App: React.FC = () => {
 
   // Handle Auto-fill
   const handleAutoFillSIP = (amount: number) => {
+    if (!result.isSolvable) return;
     setProfile({
       ...profile,
       plannedSIP: Math.round(amount)
@@ -97,6 +99,7 @@ const App: React.FC = () => {
           milestones={milestones} setMilestones={setMilestones}
           onAutoFillSIP={handleAutoFillSIP}
           requiredSIP={result.requiredSIP}
+          isSolvable={result.isSolvable}
           errors={validationErrors}
           isZeroMode={isZeroMode}
           setIsZeroMode={setIsZeroMode}

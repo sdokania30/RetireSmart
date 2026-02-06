@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { GlobalSettings, InvestmentProfile, ExpenseBucket, Milestone } from '../types';
 import { InputField } from './ui/InputField';
@@ -15,6 +15,7 @@ interface InputSectionProps {
   setMilestones: (m: Milestone[]) => void;
   onAutoFillSIP: (amount: number) => void;
   requiredSIP: number;
+  isSolvable: boolean;
   errors: Record<string, string>;
   isZeroMode: boolean;
   setIsZeroMode: (v: boolean) => void;
@@ -27,6 +28,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
   milestones, setMilestones,
   onAutoFillSIP,
   requiredSIP,
+  isSolvable,
   errors,
   isZeroMode,
   setIsZeroMode
@@ -79,15 +81,20 @@ export const InputSection: React.FC<InputSectionProps> = ({
   };
 
   // Auto-sync expense end ages with life expectancy
+  const prevLifeExpectancy = useRef(settings.lifeExpectancy);
   useEffect(() => {
-    const needsUpdate = expenses.some(e => e.endAge !== settings.lifeExpectancy);
+    const prev = prevLifeExpectancy.current;
+    if (prev === settings.lifeExpectancy) return;
+
+    const needsUpdate = expenses.some(e => e.endAge === prev);
     if (needsUpdate) {
       setExpenses(expenses.map(e => ({
         ...e,
-        endAge: settings.lifeExpectancy
+        endAge: e.endAge === prev ? settings.lifeExpectancy : e.endAge
       })));
     }
-  }, [settings.lifeExpectancy]);
+    prevLifeExpectancy.current = settings.lifeExpectancy;
+  }, [settings.lifeExpectancy, expenses, setExpenses]);
 
   return (
     <div className="p-5 space-y-8 pb-20">
@@ -179,7 +186,12 @@ export const InputSection: React.FC<InputSectionProps> = ({
           <div className="p-3 bg-brand-50 rounded-lg border border-brand-100">
             <div className="flex justify-between items-end mb-1">
               <label className="block text-xs font-bold text-brand-800">Planned Monthly SIP (₹ Lakhs)</label>
-              <button onClick={() => onAutoFillSIP(requiredSIP)} className="text-[10px] text-brand-600 hover:underline uppercase font-bold tracking-wide">
+              <button
+                onClick={() => onAutoFillSIP(requiredSIP)}
+                disabled={!isSolvable}
+                className={`text-[10px] uppercase font-bold tracking-wide ${isSolvable ? 'text-brand-600 hover:underline' : 'text-slate-300 cursor-not-allowed'}`}
+                title={!isSolvable ? 'Required SIP exceeds cap' : undefined}
+              >
                 Auto-Fill Required
               </button>
             </div>

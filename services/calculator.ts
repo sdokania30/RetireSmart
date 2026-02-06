@@ -129,9 +129,18 @@ export const calculateScenario = (
   let requiredSIP = 0;
   let attempts = 0;
   let solved = false;
+  let isSolvable = true;
+
+  // Check if solution exists within cap
+  const capSim = simulatePlan(settings, profile, expenses, milestones, high);
+  if (capSim.length > 0 && capSim[capSim.length - 1].closingBalance < 0) {
+    isSolvable = false;
+    requiredSIP = high;
+    solved = true;
+  }
 
   // Optimization: If current plan already has surplus, check if we even need SIP
-  if (finalBalanceUser >= 0) {
+  if (isSolvable && finalBalanceUser >= 0) {
     // Try zero SIP first
     const zeroSIPSim = simulatePlan(settings, profile, expenses, milestones, 0);
     if (zeroSIPSim.length > 0 && zeroSIPSim[zeroSIPSim.length - 1].closingBalance >= 0) {
@@ -179,6 +188,7 @@ export const calculateScenario = (
     requiredSIP,
     requiredCorpus,
     isFeasible: finalBalanceUser >= 0,
+    isSolvable,
     shortfall: Math.max(0, requiredCorpus - (retirementRow ? userLedger.find(r => r.age === settings.retirementAge)?.openingBalance || 0 : 0))
   };
 };

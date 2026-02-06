@@ -9,6 +9,7 @@ interface HeroSummaryProps {
 }
 
 export const HeroSummary: React.FC<HeroSummaryProps> = ({ result, plannedSIP }) => {
+  const isSolvable = result.isSolvable;
   const isShortfall = plannedSIP < result.requiredSIP;
   // If required SIP is close to 0, they are already FI.
   const isFI = result.requiredSIP <= 0;
@@ -33,16 +34,22 @@ export const HeroSummary: React.FC<HeroSummaryProps> = ({ result, plannedSIP }) 
           <TrendingUp className="w-4 h-4 text-emerald-600" />
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Required Monthly SIP</span>
         </div>
-        <div className={`text-3xl lg:text-4xl font-extrabold leading-none ${isShortfall && !isFI ? 'text-amber-600' : 'text-emerald-600'}`}>
-          {isFI ? "Fully Funded ✓" : formatCurrency(result.requiredSIP)}
+        <div className={`text-3xl lg:text-4xl font-extrabold leading-none ${!isSolvable ? 'text-red-600' : isShortfall && !isFI ? 'text-amber-600' : 'text-emerald-600'}`}>
+          {!isSolvable ? "Not Solvable" : isFI ? "Fully Funded ✓" : formatCurrency(result.requiredSIP)}
         </div>
       </div>
 
-      <div className={`px-5 py-3 rounded-xl flex items-center gap-3 text-sm font-bold shadow-lg transition-all ${isShortfall && !isFI ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-700 border-2 border-red-200' : 'bg-gradient-to-br from-green-50 to-green-100 text-green-700 border-2 border-green-200'}`}>
-        {isShortfall && !isFI ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
+      <div className={`px-5 py-3 rounded-xl flex items-center gap-3 text-sm font-bold shadow-lg transition-all ${
+        !isSolvable
+          ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-700 border-2 border-red-200'
+          : isShortfall && !isFI
+          ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-700 border-2 border-amber-200'
+          : 'bg-gradient-to-br from-green-50 to-green-100 text-green-700 border-2 border-green-200'
+      }`}>
+        {!isSolvable ? <AlertTriangle size={18} /> : isShortfall && !isFI ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
         <div>
           <span className="block text-xs opacity-75 font-normal">Status</span>
-          <span className="block">{isShortfall && !isFI ? 'Shortfall' : 'On Track'}</span>
+          <span className="block">{!isSolvable ? 'Cap Reached' : isShortfall && !isFI ? 'Shortfall' : 'On Track'}</span>
         </div>
       </div>
     </div>

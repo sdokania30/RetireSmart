@@ -46,5 +46,6 @@ export interface CalculationResult {
   requiredSIP: number;
   requiredCorpus: number; // Corpus needed at retirement
   isFeasible: boolean;
+  isSolvable: boolean; // Whether required SIP is achievable within caps
   shortfall: number;
 }

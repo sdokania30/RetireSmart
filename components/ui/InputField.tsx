@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
@@ -28,21 +28,42 @@ export const InputField: React.FC<InputFieldProps> = ({
 
     // If isLakhs is true, we display value / 100000
     const displayValue = isLakhs ? (value / 100000) : value;
+    const [lakhsInput, setLakhsInput] = useState<string>('');
+
+    useEffect(() => {
+        if (!isLakhs) return;
+        const next = displayValue === 0 ? '' : String(displayValue);
+        setLakhsInput(next);
+    }, [isLakhs, displayValue]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         if (isLakhs) {
-            // Allow user to type decimal points for lakhs
+            setLakhsInput(val);
+            // Allow partial input without forcing a numeric value
+            if (val === '' || val === '.' || val === '-' || val === '-.') return;
             const num = parseFloat(val);
             if (!isNaN(num)) {
                 // Convert back to absolute rupees
                 // Use Math.round to avoid float precision issues like 0.3 * 100000 = 30000.0000004
                 onChange((Math.round(num * 100000)).toString());
-            } else {
-                onChange("0");
             }
         } else {
             onChange(val);
+        }
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        if (!isLakhs) return;
+        const val = e.target.value;
+        if (val === '' || val === '.' || val === '-' || val === '-.') {
+            setLakhsInput('');
+            onChange('0');
+            return;
+        }
+        const num = parseFloat(val);
+        if (!isNaN(num)) {
+            onChange((Math.round(num * 100000)).toString());
         }
     };
 
@@ -58,8 +79,9 @@ export const InputField: React.FC<InputFieldProps> = ({
                 <input
                     type="number"
                     step={isLakhs ? "0.01" : step}
-                    value={displayValue === 0 ? '' : displayValue}
+                    value={isLakhs ? lakhsInput : (displayValue === 0 ? '' : displayValue)}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="0"
                     disabled={disabled}
                     className={`w-full p-2 border rounded text-sm focus:ring-2 outline-none transition-all 
