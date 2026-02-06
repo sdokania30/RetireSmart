@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { GlobalSettings, InvestmentProfile, ExpenseBucket, Milestone } from '../types';
 import { InputField } from './ui/InputField';
-import { Tooltip } from './ui/Tooltip';
 
 interface InputSectionProps {
   settings: GlobalSettings;
@@ -97,7 +96,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
   }, [settings.lifeExpectancy, expenses, setExpenses]);
 
   return (
-    <div className="p-5 space-y-8 pb-20">
+    <div className="p-5 space-y-5 pb-20">
 
       {/* Zero Mode Toggle */}
       <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
@@ -122,9 +121,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
       </div>
 
       {/* 1. Global Assumptions */}
-      <section className="space-y-4">
-        <h3 className="text-base font-bold text-slate-800 border-b-2 border-slate-200 pb-3 flex items-center gap-2">
-          <div className="w-1 h-5 bg-brand-600 rounded"></div>
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+        <h3 className="text-base font-bold text-slate-800 border-b border-slate-200 pb-3 flex items-center gap-2">
+          <div className="w-1 h-5 bg-brand-600 rounded-full"></div>
           Scenario Configuration
         </h3>
         <div className="grid grid-cols-2 gap-4">
@@ -157,9 +156,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
       </section>
 
       {/* 2. Investment Profile */}
-      <section className="space-y-4">
-        <h3 className="text-base font-bold text-slate-800 border-b-2 border-slate-200 pb-3 flex items-center gap-2">
-          <div className="w-1 h-5 bg-emerald-600 rounded"></div>
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+        <h3 className="text-base font-bold text-slate-800 border-b border-slate-200 pb-3 flex items-center gap-2">
+          <div className="w-1 h-5 bg-emerald-600 rounded-full"></div>
           Assets & Savings
         </h3>
         <div className="space-y-3">
@@ -183,7 +182,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
               disabled={isZeroMode}
             />
           </div>
-          <div className="p-3 bg-brand-50 rounded-lg border border-brand-100">
+          <div className="p-3 bg-white rounded-lg border border-brand-100">
             <div className="flex justify-between items-end mb-1">
               <label className="block text-xs font-bold text-brand-800">Planned Monthly SIP (₹ Lakhs)</label>
               <button
@@ -202,7 +201,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                 value={profile.plannedSIP > 0 ? profile.plannedSIP / 100000 : ''}
                 onChange={e => handleProfileChange('plannedSIP', (Math.round(Number(e.target.value) * 100000)).toString())}
                 placeholder="0"
-                className="w-full p-2 border border-brand-200 rounded focus:ring-2 focus:ring-brand-500 outline-none text-brand-900 font-bold"
+                className="w-full p-2 border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-brand-900 font-bold"
               />
             </div>
           </div>
@@ -210,19 +209,19 @@ export const InputSection: React.FC<InputSectionProps> = ({
       </section>
 
       {/* 3. Expense Buckets */}
-      <section className="space-y-4">
-        <div className="flex justify-between items-center border-b-2 border-slate-200 pb-3">
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+        <div className="flex justify-between items-center border-b border-slate-200 pb-3">
           <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-            <div className="w-1 h-5 bg-amber-600 rounded"></div>
+            <div className="w-1 h-5 bg-amber-600 rounded-full"></div>
             Monthly Expense Categories
           </h3>
-          <button onClick={addExpense} className="p-1 hover:bg-slate-100 rounded-full text-brand-600 transition-colors">
+          <button onClick={addExpense} className="p-2 hover:bg-white rounded-lg text-brand-600 transition-colors border border-transparent hover:border-slate-200">
             <Plus size={18} />
           </button>
         </div>
-        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
           {expenses.map((exp) => (
-            <div key={exp.id} className="p-3 bg-white border rounded-lg shadow-sm space-y-2 group relative">
+            <div key={exp.id} className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm space-y-2 group relative">
               <div className="flex justify-between items-start">
                 <input
                   type="text"
@@ -230,7 +229,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                   onChange={e => updateExpense(exp.id, 'name', e.target.value)}
                   className="font-medium text-sm border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none w-2/3"
                 />
-                <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -263,19 +262,19 @@ export const InputSection: React.FC<InputSectionProps> = ({
       </section>
 
       {/* 4. Milestones */}
-      <section className="space-y-4">
-        <div className="flex justify-between items-center border-b-2 border-slate-200 pb-3">
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+        <div className="flex justify-between items-center border-b border-slate-200 pb-3">
           <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-            <div className="w-1 h-5 bg-purple-600 rounded"></div>
+            <div className="w-1 h-5 bg-fuchsia-600 rounded-full"></div>
             Life Milestones
           </h3>
-          <button onClick={addMilestone} className="p-1 hover:bg-slate-100 rounded-full text-brand-600 transition-colors">
+          <button onClick={addMilestone} className="p-2 hover:bg-white rounded-lg text-brand-600 transition-colors border border-transparent hover:border-slate-200">
             <Plus size={18} />
           </button>
         </div>
-        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
           {milestones.map((ms) => (
-            <div key={ms.id} className="p-3 bg-white border rounded-lg shadow-sm space-y-2 group">
+            <div key={ms.id} className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm space-y-2 group">
               <div className="flex justify-between items-start">
                 <input
                   type="text"
@@ -283,7 +282,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                   onChange={e => updateMilestone(ms.id, 'name', e.target.value)}
                   className="font-medium text-sm border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none w-2/3"
                 />
-                <button onClick={() => removeMilestone(ms.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => removeMilestone(ms.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
                   <Trash2 size={14} />
                 </button>
               </div>

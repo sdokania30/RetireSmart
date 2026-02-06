@@ -12,7 +12,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const val = payload[0].value;
     return (
-      <div className={`text-white text-xs p-2 rounded shadow-lg border ${val < 0 ? 'bg-red-800 border-red-700' : 'bg-slate-800 border-slate-700'}`}>
+      <div className={`text-white text-xs p-3 rounded-lg shadow-lg border ${val < 0 ? 'bg-red-800 border-red-700' : 'bg-slate-800 border-slate-700'}`}>
         <p className="font-bold mb-1">Age: {label}</p>
         <p>Corpus: {formatCompact(val)}</p>
       </div>
@@ -45,13 +45,16 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ data, settings }) =>
   const shortfallAge = shortfallRow ? shortfallRow.age : null;
 
   return (
-    <div className="bg-white m-5 p-5 rounded-xl border shadow-sm">
-      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Corpus Glide Path</h3>
-      <div className="h-64 w-full">
+    <section className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Corpus Glide Path</h3>
+        <span className="text-xs text-slate-500">Corpus value by age</span>
+      </div>
+      <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
-            margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
+            margin={{ top: 10, right: 24, left: 8, bottom: 0 }}
           >
             <defs>
               <linearGradient id="splitColorY" x1="0" y1="0" x2="0" y2="1">
@@ -76,7 +79,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ data, settings }) =>
               tickFormatter={formatCompact} 
               stroke="#94a3b8" 
               tick={{fontSize: 12}}
-              width={80}
+              width={74}
             />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={0} stroke="#cbd5e1" strokeDasharray="3 3" />
@@ -113,14 +116,14 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ data, settings }) =>
       </div>
       
       {/* Legend */}
-      <div className="flex justify-center gap-6 mt-4 text-xs font-medium text-slate-600">
+      <div className="flex justify-center gap-6 mt-5 text-xs font-medium text-slate-600">
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Positive Corpus
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Positive Corpus
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-red-500"></span> Negative / Debt
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Negative / Debt
         </div>
       </div>
-    </div>
+    </section>
   );
 };

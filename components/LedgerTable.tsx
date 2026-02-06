@@ -8,11 +8,11 @@ interface LedgerTableProps {
 
 export const LedgerTable: React.FC<LedgerTableProps> = ({ data }) => {
   return (
-    <div className="m-5 bg-white border rounded-xl shadow-sm overflow-hidden flex flex-col">
+    <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
       <div className="p-4 border-b bg-slate-50">
         <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Detailed Ledger</h3>
       </div>
-      <div className="overflow-auto max-h-[500px]">
+      <div className="overflow-auto max-h-[540px]">
         <table className="w-full text-right text-sm">
           <thead className="text-xs text-slate-500 bg-slate-50 uppercase font-semibold sticky top-0 z-10 shadow-sm">
             <tr>
@@ -27,8 +27,8 @@ export const LedgerTable: React.FC<LedgerTableProps> = ({ data }) => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {data.map((row) => (
-              <tr key={row.age} className={`hover:bg-slate-50 group transition-colors ${row.closingBalance < 0 ? 'bg-red-50 hover:bg-red-100' : ''}`}>
-                <td className="px-4 py-3 text-center font-bold text-slate-700 sticky left-0 bg-white group-hover:bg-slate-50 group-hover:bg-opacity-100 border-r z-10">
+              <tr key={row.age} className={`hover:bg-slate-50 group transition-colors ${row.closingBalance < 0 ? 'bg-red-50/70 hover:bg-red-100/70' : ''}`}>
+                <td className="px-4 py-3 text-center font-bold text-slate-700 sticky left-0 bg-white group-hover:bg-slate-50 border-r z-10">
                   {row.age}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{formatCurrency(row.openingBalance)}</td>
@@ -44,6 +44,6 @@ export const LedgerTable: React.FC<LedgerTableProps> = ({ data }) => {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 };

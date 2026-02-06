@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
@@ -84,7 +84,7 @@ export const InputField: React.FC<InputFieldProps> = ({
                     onBlur={handleBlur}
                     placeholder="0"
                     disabled={disabled}
-                    className={`w-full p-2 border rounded text-sm focus:ring-2 outline-none transition-all 
+                    className={`w-full p-2.5 border rounded-lg text-sm focus:ring-2 outline-none transition-all 
             ${disabled ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : ''}
             ${error ? 'border-red-400 focus:ring-red-200 bg-red-50' : !disabled ? 'border-slate-200 focus:ring-brand-500' : ''}`}
                 />
