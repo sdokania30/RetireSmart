@@ -14,8 +14,8 @@ export const useScenarioValidation = (
         if (settings.currentAge < 18 || settings.currentAge > 100) {
             errors.currentAge = "Age must be between 18 and 100";
         }
-        if (settings.retirementAge <= settings.currentAge) {
-            errors.retirementAge = "Must be greater than Current Age";
+        if (settings.retirementAge < settings.currentAge) {
+            errors.retirementAge = "Must be greater than or equal to Current Age";
         }
         if (settings.lifeExpectancy <= settings.retirementAge) {
             errors.lifeExpectancy = "Must be greater than Retirement Age";

@@ -45,6 +45,7 @@ export interface CalculationResult {
   ledger: LedgerRow[];
   requiredSIP: number;
   requiredCorpus: number; // Corpus needed at retirement
+  todayShortfall: number; // Lumpsum needed today with current SIP plan
   isFeasible: boolean;
   isSolvable: boolean; // Whether required SIP is achievable within caps
   shortfall: number;

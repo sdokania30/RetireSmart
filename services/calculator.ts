@@ -115,7 +115,9 @@ export const calculateScenario = (
       ledger: [],
       requiredSIP: 0,
       requiredCorpus: 0,
+      todayShortfall: 0,
       isFeasible: false,
+      isSolvable: false,
       shortfall: 0
     };
   }
@@ -181,14 +183,59 @@ export const calculateScenario = (
   const retirementRow = optimalLedger.find(r => r.age === settings.retirementAge);
   const requiredCorpus = retirementRow ? retirementRow.openingBalance : 0;
 
+  // 4. Determine "Today Shortfall": one-time corpus needed now with current planned SIP unchanged
+  const finalBalanceWithExtraCorpus = (extraCorpus: number): number => {
+    const sim = simulatePlan(
+      settings,
+      { ...profile, currentCorpus: profile.currentCorpus + extraCorpus },
+      expenses,
+      milestones
+    );
+    return sim.length > 0 ? sim[sim.length - 1].closingBalance : Number.NEGATIVE_INFINITY;
+  };
+
+  let todayShortfall = 0;
+  if (finalBalanceUser < 0) {
+    let lowCorpus = 0;
+    let highCorpus = 100000000000; // 10,000 Cr cap
+    let corpusAttempts = 0;
+
+    const capFinalBal = finalBalanceWithExtraCorpus(highCorpus);
+    if (capFinalBal < 0) {
+      todayShortfall = highCorpus;
+    } else {
+      while (corpusAttempts < 100) {
+        const midCorpus = (lowCorpus + highCorpus) / 2;
+        const finalBal = finalBalanceWithExtraCorpus(midCorpus);
+
+        if (Math.abs(finalBal) < 10000) {
+          todayShortfall = midCorpus;
+          break;
+        }
+
+        if (finalBal < 0) {
+          lowCorpus = midCorpus;
+        } else {
+          highCorpus = midCorpus;
+        }
+        corpusAttempts++;
+      }
+
+      if (todayShortfall === 0) {
+        todayShortfall = highCorpus;
+      }
+    }
+  }
+
   return {
     ledger: userLedger, // We show the user's current path, but maybe we should show optimal? Usually user wants to see "If I change nothing..."
     // Spec implies "Calculate Shortfall/Surplus".
     // Let's return userLedger for visualization, but use requiredSIP for the "Hero" metric.
     requiredSIP,
     requiredCorpus,
+    todayShortfall,
     isFeasible: finalBalanceUser >= 0,
     isSolvable,
-    shortfall: Math.max(0, requiredCorpus - (retirementRow ? userLedger.find(r => r.age === settings.retirementAge)?.openingBalance || 0 : 0))
+    shortfall: todayShortfall
   };
 };

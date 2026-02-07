@@ -14,6 +14,7 @@ interface InputSectionProps {
   setMilestones: (m: Milestone[]) => void;
   onAutoFillSIP: (amount: number) => void;
   requiredSIP: number;
+  yearsToRetirement: number;
   isSolvable: boolean;
   errors: Record<string, string>;
   isZeroMode: boolean;
@@ -27,6 +28,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
   milestones, setMilestones,
   onAutoFillSIP,
   requiredSIP,
+  yearsToRetirement,
   isSolvable,
   errors,
   isZeroMode,
@@ -150,6 +152,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
             value={settings.postRetirementROI}
             onChange={v => handleSettingChange('postRetirementROI', v)}
             tooltip="Expected annual return on corpus after retirement"
+            step="0.1"
             disabled={isZeroMode}
           />
         </div>
@@ -173,28 +176,35 @@ export const InputSection: React.FC<InputSectionProps> = ({
               label="Pre-Ret. ROI %"
               value={profile.preRetirementROI}
               onChange={v => handleProfileChange('preRetirementROI', v)}
+              step="0.1"
               disabled={isZeroMode}
             />
             <InputField
               label="SIP Step-Up %"
               value={profile.sipStepUp}
               onChange={v => handleProfileChange('sipStepUp', v)}
+              step="0.1"
               disabled={isZeroMode}
             />
           </div>
           <div className="p-3 bg-white rounded-lg border border-brand-100 space-y-2">
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] text-slate-500">
+                Needed: {isSolvable
+                  ? `${requiredSIP > 0 ? '≈ ' : ''}₹ ${(requiredSIP / 100000).toFixed(2)} L/mo${yearsToRetirement > 0 ? ` for ${yearsToRetirement}Y` : ''}`
+                  : 'Not solvable within cap'}
+              </span>
               <button
                 onClick={() => onAutoFillSIP(requiredSIP)}
                 disabled={!isSolvable}
                 className={`text-[10px] uppercase font-bold tracking-wide ${isSolvable ? 'text-brand-600 hover:underline' : 'text-slate-300 cursor-not-allowed'}`}
                 title={!isSolvable ? 'Required SIP exceeds cap' : undefined}
               >
-                Auto-Fill Required
+                Auto-Fill Needed
               </button>
             </div>
             <InputField
-              label="Planned Monthly SIP"
+              label={`Planned Monthly Investment${yearsToRetirement > 0 ? ` (${yearsToRetirement}Y)` : ''}`}
               value={profile.plannedSIP}
               onChange={v => handleProfileChange('plannedSIP', v)}
               isLakhs={true}
@@ -240,6 +250,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                   label="Infl. %"
                   value={exp.inflationRate}
                   onChange={v => updateExpense(exp.id, 'inflationRate', Number(v))}
+                  step="0.1"
                   className="w-full"
                   disabled={isZeroMode}
                 />
@@ -293,6 +304,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                   label="Infl. %"
                   value={ms.inflationRate}
                   onChange={v => updateMilestone(ms.id, 'inflationRate', Number(v))}
+                  step="0.1"
                   className="w-full"
                   disabled={isZeroMode}
                 />

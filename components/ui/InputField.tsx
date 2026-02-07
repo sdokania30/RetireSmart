@@ -32,13 +32,15 @@ export const InputField: React.FC<InputFieldProps> = ({
 
     useEffect(() => {
         if (!isLakhs) return;
-        const next = displayValue === 0 ? '' : String(displayValue);
+        const next = String(displayValue);
         setLakhsInput(next);
     }, [isLakhs, displayValue]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         if (isLakhs) {
+            // Keep text input permissive for partial numeric states during typing.
+            if (!/^-?\d*\.?\d*$/.test(val)) return;
             setLakhsInput(val);
             // Allow partial input without forcing a numeric value
             if (val === '' || val === '.' || val === '-' || val === '-.') return;
@@ -77,9 +79,11 @@ export const InputField: React.FC<InputFieldProps> = ({
             </div>
             <div className="relative">
                 <input
-                    type="number"
-                    step={isLakhs ? "0.01" : step}
-                    value={isLakhs ? lakhsInput : (displayValue === 0 ? '' : displayValue)}
+                    type={isLakhs ? "text" : "number"}
+                    inputMode={isLakhs ? "decimal" : undefined}
+                    pattern={isLakhs ? "^-?[0-9]*[.]?[0-9]*$" : undefined}
+                    step={isLakhs ? undefined : step}
+                    value={isLakhs ? lakhsInput : displayValue}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="0"

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { DEFAULT_SETTINGS, DEFAULT_PROFILE, DEFAULT_EXPENSES, DEFAULT_MILESTONES } from './constants';
 import { GlobalSettings, InvestmentProfile, ExpenseBucket, Milestone } from './types';
-import { calculateScenario } from './services/calculator';
+import { calculateScenario, simulatePlan } from './services/calculator';
 import { formatCurrency } from './constants';
 import { InputSection } from './components/InputSection';
 import { HeroSummary } from './components/HeroSummary';
@@ -64,6 +64,7 @@ const App: React.FC = () => {
         ledger: [],
         requiredSIP: 0,
         requiredCorpus: 0,
+        todayShortfall: 0,
         isFeasible: false,
         isSolvable: false,
         shortfall: 0
@@ -84,24 +85,51 @@ const App: React.FC = () => {
   // Warning for impossible plan (Inflation > Post-Retirement ROI)
   // Disable this check in Zero Mode since both are 0
   const isImpossible = !isZeroMode && settings.inflation > settings.postRetirementROI;
+  const yearsToRetirement = Math.max(0, settings.retirementAge - settings.currentAge);
 
-  const zeroModeSummary = useMemo(() => {
-    if (!isZeroMode || hasCriticalErrors || result.ledger.length === 0) return null;
+  const projectionSummary = useMemo(() => {
+    if (hasCriticalErrors || result.ledger.length === 0) return null;
 
-    const totalExpenses = result.ledger.reduce((sum, row) => sum + row.expenses, 0);
-    const totalMilestones = result.ledger.reduce((sum, row) => sum + row.milestones, 0);
-    const totalOutflows = totalExpenses + totalMilestones;
+    const shortfallLedger = simulatePlan(
+      effectiveSettings,
+      { ...effectiveProfile, currentCorpus: effectiveProfile.currentCorpus + result.todayShortfall },
+      effectiveExpenses,
+      effectiveMilestones
+    );
+    const retirementRow = shortfallLedger.find((row) => row.age === settings.retirementAge);
+    const preRetirementRows = shortfallLedger.filter((row) => row.age < settings.retirementAge);
+    const postRetirementRows = shortfallLedger.filter((row) => row.age >= settings.retirementAge);
+    const currentCorpusToday = effectiveProfile.currentCorpus;
+    const todayShortfallAdded = result.todayShortfall;
+    const preRetirementSipInflow = preRetirementRows.reduce((sum, row) => sum + row.investments, 0);
+    const preRetirementGrowthInflow = preRetirementRows.reduce((sum, row) => sum + row.growth, 0);
+    const retirementExpenses = postRetirementRows.reduce((sum, row) => sum + row.expenses, 0);
+    const retirementMilestones = postRetirementRows.reduce((sum, row) => sum + row.milestones, 0);
+    const postRetirementOutflows = retirementExpenses + retirementMilestones;
 
     return {
-      totalExpenses,
-      totalMilestones,
-      totalOutflows,
-      requiredCorpus: result.requiredCorpus,
+      targetCorpusAtRetirement: retirementRow ? retirementRow.openingBalance : 0,
+      currentCorpusToday,
+      todayShortfallAdded,
+      preRetirementSipInflow,
+      preRetirementGrowthInflow,
+      inflowCorpusSipGrowth: currentCorpusToday + todayShortfallAdded + preRetirementSipInflow + preRetirementGrowthInflow,
+      retirementExpenses,
+      retirementMilestones,
+      postRetirementOutflows,
     };
-  }, [isZeroMode, hasCriticalErrors, result]);
+  }, [
+    hasCriticalErrors,
+    result,
+    settings.retirementAge,
+    effectiveSettings,
+    effectiveProfile,
+    effectiveExpenses,
+    effectiveMilestones
+  ]);
 
-  const zeroModeExpenseFormulaRows = useMemo(() => {
-    if (!isZeroMode || hasCriticalErrors) return [];
+  const projectionExpenseFormulaRows = useMemo(() => {
+    if (hasCriticalErrors) return [];
 
     return effectiveExpenses
       .map((bucket) => {
@@ -109,30 +137,40 @@ const App: React.FC = () => {
           0,
           Math.min(bucket.endAge, settings.lifeExpectancy) - settings.retirementAge + 1
         );
-        const total = bucket.currentMonthlyCost * 12 * durationYears;
+
+        const startIndex = Math.max(0, settings.retirementAge - settings.currentAge);
+        const endIndex = Math.max(0, Math.min(bucket.endAge, settings.lifeExpectancy) - settings.currentAge);
+
+        let total = 0;
+        for (let i = startIndex; i <= endIndex; i++) {
+          total += bucket.currentMonthlyCost * Math.pow(1 + bucket.inflationRate / 100, i) * 12;
+        }
+
         return {
           category: bucket.name,
           monthly: bucket.currentMonthlyCost,
           years: durationYears,
+          inflationRate: bucket.inflationRate,
           total,
         };
       })
       .filter((row) => row.years > 0 && row.monthly > 0);
-  }, [isZeroMode, hasCriticalErrors, settings.retirementAge, settings.lifeExpectancy, effectiveExpenses]);
+  }, [hasCriticalErrors, settings.retirementAge, settings.lifeExpectancy, settings.currentAge, effectiveExpenses]);
 
-  const zeroModeMilestoneFormulaRows = useMemo(() => {
-    if (!isZeroMode || hasCriticalErrors) return [];
+  const projectionMilestoneFormulaRows = useMemo(() => {
+    if (hasCriticalErrors) return [];
 
     return effectiveMilestones
       .map((ms) => ({
         name: ms.name,
         yearsFromNow: ms.yearOffset,
         age: settings.currentAge + ms.yearOffset,
-        amount: ms.currentCost,
+        inflationRate: ms.inflationRate,
+        amount: ms.currentCost * Math.pow(1 + ms.inflationRate / 100, ms.yearOffset),
       }))
       .filter((ms) => ms.yearsFromNow >= 0 && ms.age <= settings.lifeExpectancy && ms.amount > 0)
       .sort((a, b) => a.age - b.age);
-  }, [isZeroMode, hasCriticalErrors, effectiveMilestones, settings.currentAge, settings.lifeExpectancy]);
+  }, [hasCriticalErrors, effectiveMilestones, settings.currentAge, settings.lifeExpectancy]);
 
   return (
     <div className="min-h-screen bg-slate-100 relative overflow-x-hidden">
@@ -164,6 +202,7 @@ const App: React.FC = () => {
                 milestones={milestones} setMilestones={setMilestones}
                 onAutoFillSIP={handleAutoFillSIP}
                 requiredSIP={result.requiredSIP}
+                yearsToRetirement={yearsToRetirement}
                 isSolvable={result.isSolvable}
                 errors={validationErrors}
                 isZeroMode={isZeroMode}
@@ -181,7 +220,9 @@ const App: React.FC = () => {
                 </div>
                 <span className="text-xs text-slate-500">Plan horizon: Age {settings.currentAge} to {settings.lifeExpectancy}</span>
               </div>
-              <HeroSummary result={result} plannedSIP={effectiveProfile.plannedSIP} />
+              <HeroSummary
+                result={result}
+              />
             </div>
 
             <div className="p-5 md:p-6 pt-5 space-y-4 xl:flex-1 xl:overflow-y-auto">
@@ -227,10 +268,12 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {zeroModeSummary && (
+              {projectionSummary && (
                 <section className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
                   <div className="px-4 py-3 border-b border-blue-100 bg-blue-50/70 flex items-center justify-between gap-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900">Zero Growth Breakdown</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900">
+                      {isZeroMode ? 'Zero Growth Breakdown' : 'Projection Breakdown'}
+                    </h4>
                     <button
                       onClick={() => setIsZeroSummaryOpen((v) => !v)}
                       className="text-blue-700 hover:text-blue-900 p-1 rounded"
@@ -244,29 +287,52 @@ const App: React.FC = () => {
                       <table className="w-full text-sm">
                         <tbody className="divide-y divide-slate-100">
                           <tr>
-                            <td className="px-4 py-2 text-slate-600">Total Lifetime Expenses</td>
-                            <td className="px-4 py-2 text-right font-semibold text-slate-900">{formatCurrency(zeroModeSummary.totalExpenses)}</td>
+                            <td className="px-4 py-2 text-slate-600">Target Corpus (Start of Retirement)</td>
+                            <td className="px-4 py-2 text-right font-semibold text-blue-900">{formatCurrency(projectionSummary.targetCorpusAtRetirement)}</td>
                           </tr>
                           <tr>
-                            <td className="px-4 py-2 text-slate-600">Total Milestones</td>
-                            <td className="px-4 py-2 text-right font-semibold text-slate-900">{formatCurrency(zeroModeSummary.totalMilestones)}</td>
+                            <td className="px-4 py-2 text-slate-600">Inflow (Corpus + SIP, Growth Adjusted)</td>
+                            <td className="px-4 py-2 text-right font-semibold text-emerald-700">{formatCurrency(projectionSummary.inflowCorpusSipGrowth)}</td>
+                          </tr>
+                          <tr className="bg-slate-50/60">
+                            <td className="px-6 py-2 text-slate-500 text-xs">Current Corpus (Today)</td>
+                            <td className="px-4 py-2 text-right text-xs font-medium text-slate-700">{formatCurrency(projectionSummary.currentCorpusToday)}</td>
+                          </tr>
+                          <tr className="bg-slate-50/60">
+                            <td className="px-6 py-2 text-slate-500 text-xs">One-time Shortfall Added Today</td>
+                            <td className="px-4 py-2 text-right text-xs font-medium text-slate-700">{formatCurrency(projectionSummary.todayShortfallAdded)}</td>
+                          </tr>
+                          <tr className="bg-slate-50/60">
+                            <td className="px-6 py-2 text-slate-500 text-xs">SIP Contributions (till retirement)</td>
+                            <td className="px-4 py-2 text-right text-xs font-medium text-slate-700">{formatCurrency(projectionSummary.preRetirementSipInflow)}</td>
+                          </tr>
+                          <tr className="bg-slate-50/60">
+                            <td className="px-6 py-2 text-slate-500 text-xs">Pre-Retirement Growth</td>
+                            <td className="px-4 py-2 text-right text-xs font-medium text-slate-700">{formatCurrency(projectionSummary.preRetirementGrowthInflow)}</td>
                           </tr>
                           <tr>
-                            <td className="px-4 py-2 text-slate-600">Total Outflows (Raw)</td>
-                            <td className="px-4 py-2 text-right font-semibold text-slate-900">{formatCurrency(zeroModeSummary.totalOutflows)}</td>
+                            <td className="px-4 py-2 text-slate-600">Expense (Inflation Adjusted)</td>
+                            <td className="px-4 py-2 text-right font-semibold text-slate-900">{formatCurrency(projectionSummary.postRetirementOutflows)}</td>
                           </tr>
-                          <tr>
-                            <td className="px-4 py-2 text-slate-600">Target Corpus @ Retirement</td>
-                            <td className="px-4 py-2 text-right font-semibold text-blue-900">{formatCurrency(zeroModeSummary.requiredCorpus)}</td>
+                          <tr className="bg-slate-50/60">
+                            <td className="px-6 py-2 text-slate-500 text-xs">Retirement Expenses (Inflation Adjusted)</td>
+                            <td className="px-4 py-2 text-right text-xs font-medium text-slate-700">{formatCurrency(projectionSummary.retirementExpenses)}</td>
+                          </tr>
+                          <tr className="bg-slate-50/60">
+                            <td className="px-6 py-2 text-slate-500 text-xs">Retirement Milestones (Inflation Adjusted)</td>
+                            <td className="px-4 py-2 text-right text-xs font-medium text-slate-700">{formatCurrency(projectionSummary.retirementMilestones)}</td>
                           </tr>
                         </tbody>
                       </table>
+                      <div className="px-4 py-2 border-t border-slate-100 text-[11px] text-slate-500">
+                        Inflow = Current Corpus + One-time Shortfall + SIP Contributions + Pre-Retirement Growth. Expense = Retirement Expenses + Retirement Milestones.
+                      </div>
                     </div>
                   )}
                 </section>
               )}
 
-              {zeroModeSummary && (
+              {projectionSummary && (
                 <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Formula Breakdown</h4>
@@ -285,24 +351,28 @@ const App: React.FC = () => {
                         <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Monthly Expense Categories</h5>
                       </div>
                       <div className="divide-y divide-slate-100">
-                        {zeroModeExpenseFormulaRows.map((row, idx) => (
+                        {projectionExpenseFormulaRows.map((row, idx) => (
                           <div key={`exp-formula-${idx}`} className="px-3 py-2.5 flex items-start justify-between gap-4">
                             <div className="min-w-0">
                               <div className="text-sm font-medium text-slate-800">{idx + 1}. {row.category}</div>
-                              <div className="text-xs text-slate-500 font-mono">{formatCurrency(row.monthly)} PM x {row.years} YR</div>
+                              <div className="text-xs text-slate-500 font-mono">
+                                {formatCurrency(row.monthly)} PM {isZeroMode ? `x ${row.years} YR` : `@ ${row.inflationRate}% x ${row.years} YR`}
+                              </div>
                             </div>
                             <div className="text-sm font-semibold text-slate-900 whitespace-nowrap">
                               {formatCurrency(row.total)}
                             </div>
                           </div>
                         ))}
-                        {zeroModeExpenseFormulaRows.length === 0 && (
+                        {projectionExpenseFormulaRows.length === 0 && (
                           <div className="px-3 py-3 text-sm text-slate-500">No monthly categories contribute in retirement years.</div>
                         )}
                       </div>
                       <div className="px-3 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-sm">
-                        <span className="font-semibold text-slate-600">Total Monthly Expenses</span>
-                        <span className="font-semibold text-slate-900">{formatCurrency(zeroModeSummary.totalExpenses)}</span>
+                        <span className="font-semibold text-slate-600">Total {isZeroMode ? 'Raw' : 'Projected'} Expenses</span>
+                        <span className="font-semibold text-slate-900">
+                          {formatCurrency(projectionExpenseFormulaRows.reduce((sum, row) => sum + row.total, 0))}
+                        </span>
                       </div>
                     </div>
 
@@ -311,30 +381,39 @@ const App: React.FC = () => {
                         <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Life Milestones</h5>
                       </div>
                       <div className="divide-y divide-slate-100">
-                        {zeroModeMilestoneFormulaRows.map((row, idx) => (
+                        {projectionMilestoneFormulaRows.map((row, idx) => (
                           <div key={`ms-formula-${idx}`} className="px-3 py-2.5 flex items-start justify-between gap-4">
                             <div className="min-w-0">
                               <div className="text-sm font-medium text-slate-800">{row.name}</div>
-                              <div className="text-xs text-slate-500 font-mono">@ {row.yearsFromNow} YRS (Age {row.age})</div>
+                              <div className="text-xs text-slate-500 font-mono">
+                                @ {row.yearsFromNow} YRS (Age {row.age}){!isZeroMode ? ` @ ${row.inflationRate}%` : ''}
+                              </div>
                             </div>
                             <div className="text-sm font-semibold text-slate-900 whitespace-nowrap">
                               {formatCurrency(row.amount)}
                             </div>
                           </div>
                         ))}
-                        {zeroModeMilestoneFormulaRows.length === 0 && (
+                        {projectionMilestoneFormulaRows.length === 0 && (
                           <div className="px-3 py-3 text-sm text-slate-500">No milestones configured in the planning range.</div>
                         )}
                       </div>
                       <div className="px-3 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-sm">
                         <span className="font-semibold text-slate-600">Total Milestones</span>
-                        <span className="font-semibold text-slate-900">{formatCurrency(zeroModeSummary.totalMilestones)}</span>
+                        <span className="font-semibold text-slate-900">
+                          {formatCurrency(projectionMilestoneFormulaRows.reduce((sum, row) => sum + row.amount, 0))}
+                        </span>
                       </div>
                     </div>
 
                     <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-3 py-2.5 flex items-center justify-between text-sm">
                       <span className="font-semibold text-blue-900">Grand Total (Expenses + Milestones)</span>
-                      <span className="font-bold text-blue-900">{formatCurrency(zeroModeSummary.totalOutflows)}</span>
+                      <span className="font-bold text-blue-900">
+                        {formatCurrency(
+                          projectionExpenseFormulaRows.reduce((sum, row) => sum + row.total, 0) +
+                          projectionMilestoneFormulaRows.reduce((sum, row) => sum + row.amount, 0)
+                        )}
+                      </span>
                     </div>
                     </div>
                   )}
