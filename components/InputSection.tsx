@@ -182,9 +182,8 @@ export const InputSection: React.FC<InputSectionProps> = ({
               disabled={isZeroMode}
             />
           </div>
-          <div className="p-3 bg-white rounded-lg border border-brand-100">
-            <div className="flex justify-between items-end mb-1">
-              <label className="block text-xs font-bold text-brand-800">Planned Monthly SIP (₹ Lakhs)</label>
+          <div className="p-3 bg-white rounded-lg border border-brand-100 space-y-2">
+            <div className="flex justify-end">
               <button
                 onClick={() => onAutoFillSIP(requiredSIP)}
                 disabled={!isSolvable}
@@ -194,16 +193,12 @@ export const InputSection: React.FC<InputSectionProps> = ({
                 Auto-Fill Required
               </button>
             </div>
-            <div className="relative">
-              <input
-                type="number"
-                step="0.01"
-                value={profile.plannedSIP > 0 ? profile.plannedSIP / 100000 : ''}
-                onChange={e => handleProfileChange('plannedSIP', (Math.round(Number(e.target.value) * 100000)).toString())}
-                placeholder="0"
-                className="w-full p-2 border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-brand-900 font-bold"
-              />
-            </div>
+            <InputField
+              label="Planned Monthly SIP"
+              value={profile.plannedSIP}
+              onChange={v => handleProfileChange('plannedSIP', v)}
+              isLakhs={true}
+            />
           </div>
         </div>
       </section>

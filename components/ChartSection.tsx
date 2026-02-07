@@ -2,10 +2,13 @@ import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { LedgerRow, GlobalSettings } from '../types';
 import { formatCompact } from '../constants';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface ChartSectionProps {
   data: LedgerRow[];
   settings: GlobalSettings;
+  isCollapsed?: boolean;
+  onToggle?: () => void;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -21,7 +24,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const ChartSection: React.FC<ChartSectionProps> = ({ data, settings }) => {
+export const ChartSection: React.FC<ChartSectionProps> = ({ data, settings, isCollapsed = false, onToggle }) => {
   
   // 1. Calculate the gradient offset for Y-axis (Positive vs Negative)
   const gradientOffset = () => {
@@ -48,8 +51,21 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ data, settings }) =>
     <section className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
       <div className="flex items-center justify-between gap-3 mb-4">
         <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Corpus Glide Path</h3>
-        <span className="text-xs text-slate-500">Corpus value by age</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">Corpus value by age</span>
+          {onToggle && (
+            <button
+              onClick={onToggle}
+              className="text-slate-600 hover:text-slate-900 p-1 rounded"
+              aria-label="Toggle Corpus Glide Path"
+            >
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
       </div>
+      {!isCollapsed && (
+        <>
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
@@ -124,6 +140,8 @@ export const ChartSection: React.FC<ChartSectionProps> = ({ data, settings }) =>
           <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Negative / Debt
         </div>
       </div>
+        </>
+      )}
     </section>
   );
 };

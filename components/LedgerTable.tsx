@@ -1,18 +1,31 @@
 import React from 'react';
 import { LedgerRow } from '../types';
 import { formatCurrency } from '../constants';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface LedgerTableProps {
   data: LedgerRow[];
+  isCollapsed?: boolean;
+  onToggle?: () => void;
 }
 
-export const LedgerTable: React.FC<LedgerTableProps> = ({ data }) => {
+export const LedgerTable: React.FC<LedgerTableProps> = ({ data, isCollapsed = false, onToggle }) => {
   return (
     <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-      <div className="p-4 border-b bg-slate-50">
+      <div className="p-4 border-b bg-slate-50 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Detailed Ledger</h3>
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            className="text-slate-600 hover:text-slate-900 p-1 rounded"
+            aria-label="Toggle Detailed Ledger"
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        )}
       </div>
-      <div className="overflow-auto max-h-[540px]">
+      {!isCollapsed && (
+        <div className="overflow-auto max-h-[540px]">
         <table className="w-full text-right text-sm">
           <thead className="text-xs text-slate-500 bg-slate-50 uppercase font-semibold sticky top-0 z-10 shadow-sm">
             <tr>
@@ -43,7 +56,8 @@ export const LedgerTable: React.FC<LedgerTableProps> = ({ data }) => {
             ))}
           </tbody>
         </table>
-      </div>
+        </div>
+      )}
     </section>
   );
 };
