@@ -135,13 +135,13 @@ const App: React.FC = () => {
   }, [isZeroMode, hasCriticalErrors, effectiveMilestones, settings.currentAge, settings.lifeExpectancy]);
 
   return (
-    <div className="min-h-screen bg-slate-100 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-100 relative overflow-x-hidden">
       <div className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-brand-100 blur-3xl opacity-80" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-emerald-100 blur-3xl opacity-70" />
 
-      <div className="relative z-10 h-screen p-3 md:p-5">
-        <div className="h-full flex flex-col xl:flex-row gap-4">
-          <aside className="min-h-0 flex flex-col xl:w-[420px] xl:min-w-[340px] xl:max-w-[620px] xl:resize-x rounded-2xl border border-white/70 bg-white/90 backdrop-blur shadow-panel overflow-hidden">
+      <div className="relative z-10 min-h-screen xl:h-screen p-3 md:p-5">
+        <div className="min-h-full xl:h-full flex flex-col xl:flex-row gap-4">
+          <aside className="flex flex-col xl:min-h-0 xl:w-[420px] xl:min-w-[340px] xl:max-w-[620px] xl:resize-x rounded-2xl border border-white/70 bg-white/90 backdrop-blur shadow-panel overflow-visible xl:overflow-hidden">
             <div className="p-5 border-b border-slate-200/80 bg-white/95 sticky top-0 z-20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -156,7 +156,7 @@ const App: React.FC = () => {
                 <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-md">v1.3</span>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="xl:flex-1 xl:overflow-y-auto">
               <InputSection
                 settings={settings} setSettings={setSettings}
                 profile={profile} setProfile={setProfile}
@@ -172,7 +172,7 @@ const App: React.FC = () => {
             </div>
           </aside>
 
-          <main className="min-h-0 flex-1 rounded-2xl border border-white/70 bg-white/85 backdrop-blur shadow-panel overflow-hidden flex flex-col">
+          <main className="flex-1 xl:min-h-0 rounded-2xl border border-white/70 bg-white/85 backdrop-blur shadow-panel overflow-visible xl:overflow-hidden flex flex-col">
             <div className="p-5 md:p-6 border-b border-slate-200/70 bg-white/95">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-2 text-slate-500">
@@ -184,7 +184,7 @@ const App: React.FC = () => {
               <HeroSummary result={result} plannedSIP={effectiveProfile.plannedSIP} />
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 md:p-6 pt-5 space-y-4">
+            <div className="p-5 md:p-6 pt-5 space-y-4 xl:flex-1 xl:overflow-y-auto">
               {hasCriticalErrors && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-900 shadow-sm">
                   <ShieldAlert className="shrink-0 mt-0.5" />
